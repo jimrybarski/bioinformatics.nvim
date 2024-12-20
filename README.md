@@ -1,5 +1,5 @@
-# nvim-plugin-template
-neovim plugin template integration test and doc publish
+# bioinformatics.nvim
+A collection of bioinformatics-related utilities for Neovim.
 
 ## Usage
 
