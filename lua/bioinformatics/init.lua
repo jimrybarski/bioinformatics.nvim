@@ -18,7 +18,7 @@ M.reverse_complement = function(dna_seq)
 end
 
 
-M.get_visually_selected_text = function()
+M.get_visual_selection = function()
   vim.cmd([[execute "normal! \<esc>"]])
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('gv', true, false, true), 'n', false)
 
@@ -45,7 +45,6 @@ M.get_visually_selected_text = function()
   if #lines == 0 then
     return ""
   end
-
   -- Handle single-line selection
   if #lines == 1 then
     lines[1] = string.sub(lines[1], cscol + 1, cecol)
@@ -54,25 +53,29 @@ M.get_visually_selected_text = function()
     lines[1] = string.sub(lines[1], cscol + 1)
     lines[#lines] = string.sub(lines[#lines], 1, cecol)
   end
-
   -- Join the lines into a single string
   return table.concat(lines, "\n")
 end
 
-M.set_query_string = function() 
-    local s = M.get_visually_selected_text()
-    M.data.query_string = s
-    vim.notify("Set query string to " .. s, "info", {timeout=0.5})
+M.set_pairwise_query = function(seq) 
+    M.data.query_string = seq
 end
 
-M.set_subject_string = function() 
-    local s = M.get_visually_selected_text()
-    M.data.subject_string = s
-    vim.notify("Set subject string to " .. s, "info", {timeout=0.5})
+M.set_pairwise_subject = function(seq) 
+    M.data.subject_string = seq
 end
 
-M.pairwise_alignment = function()
-    local command = string.format('biotools pairwise-semiglobal --try-rc %s %s', M.data.query_string, M.data.subject_string)
+M.pairwise_align = function(mode, try_reverse_complement, gap_open_penalty, gap_extend_penalty)
+    -- set defaults
+    local mode = mode or "semiglobal"
+    local try_reverse_complement = try_reverse_complement or true
+    local gap_open_penalty = gap_open_penalty or 2
+    local gap_extend_penalty = gap_extend_penalty or 1
+    try_rc_text = ""
+    if try_reverse_complement then
+        try_rc_text = "--try-rc"
+    end
+    local command = string.format('biotools pairwise-%s %s --gap-open %s --gap-extend %s %s %s ', mode, try_rc_text, gap_open_penalty, gap_extend_penalty, M.data.query_string, M.data.subject_string)
     -- Execute the command and capture the output
     local output = vim.fn.systemlist(command)
 
@@ -82,35 +85,46 @@ M.pairwise_alignment = function()
         vim.api.nvim_err_writeln("Error executing command: " .. table.concat(output, '\n'))
         return
     end
-    -- vim.notify(output, "info")
     M.show_popup(output)
 end
 
+M.get_string_width = function(output)
+    local first_line = output[1]
+    return string.len(first_line)
+end
+
 M.show_popup = function(output)
-  -- Create a new buffer
-  local buf = vim.api.nvim_create_buf(false, true)  -- No listed buffer, scratch buffer
-
+  if not M.pairwise_buf or not vim.api.nvim_buf_is_valid(M.pairwise_buf) then
+    M.pairwise_buf = vim.api.nvim_create_buf(false, true)
+  else
+    -- Clear previous contents
+    vim.api.nvim_buf_set_lines(M.pairwise_buf, 0, -1, false, {})
+  end
   -- Set the buffer lines to the command output
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, output)
-
+  vim.api.nvim_buf_set_lines(M.pairwise_buf, 0, -1, false, output)
   -- Define the size and position of the window
-  local width = math.max(10, math.floor(vim.o.columns * 0.8))
-  local height = math.max(10, math.floor(vim.o.lines * 0.8))
-  local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - width) / 2)
+  local width = M.get_string_width(output)
+  local height = 3
+  local row = 3
+  local col = 3
+  local cursor_r, cursor_c = unpack(vim.api.nvim_win_get_cursor(0))
+  local current_window = vim.api.nvim_get_current_win()
+  local winheight = vim.api.nvim_win_get_height(current_window)
+  local win_height = math.min(winheight - 9, cursor_r + 1)
 
   -- Create a new floating window
-  local win = vim.api.nvim_open_win(buf, true, {
+  local win = vim.api.nvim_open_win(M.pairwise_buf, true, {
     relative = 'editor',
     width = width,
     height = height,
-    row = row,
+    row = win_height,
     col = col,
-    style = 'minimal'
+    border = 'rounded',
+    style = 'minimal',
   })
 
   -- Map 'q' to close the window
-  vim.api.nvim_buf_set_keymap(buf, 'n', 'q', '<Cmd>bd!<CR>', { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(M.pairwise_buf, 'n', 'q', '<Cmd>bd!<CR>', { noremap = true, silent = true })
 end
 
 return M
