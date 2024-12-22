@@ -2,11 +2,18 @@ local M = {}
 
 M.data = {}
 
---- Transcribes a DNA sequence to RNA by replacing thymine (T) with uracil (U).
+--- Converts a DNA sequence to RNA.
 -- @param dna_seq The DNA sequence as a string
 -- @return RNA sequence as a string
 M.dna_to_rna = function(dna_seq)
     return dna_seq:gsub("T", "U")
+end
+
+--- Converts an RNA sequence to DNA.
+-- @param rna_seq The RNA sequence as a string
+-- @return DNA sequence as a string
+M.rna_to_dna = function(rna_seq)
+    return rna_seq:gsub("U", "T")
 end
 
 --- Returns the reverse complement of a DNA sequence.
@@ -18,16 +25,17 @@ M.reverse_complement = function(dna_seq)
 end
 
 
+--- Gets the text of the current visual selection.
+-- @return string
 M.get_visual_selection = function()
   vim.cmd([[execute "normal! \<esc>"]])
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('gv', true, false, true), 'n', false)
-
-  local bufnr = vim.api.nvim_get_current_buf()
 
   -- Retrieve positions of visually selected text
   local start_pos = vim.fn.getpos("'<")
   local end_pos = vim.fn.getpos("'>")
 
+  -- Get the start and end coordinates of the visual selection
   local csrow = start_pos[2] - 1
   local cscol = start_pos[3] - 1
   local cerow = end_pos[2] - 1
@@ -39,12 +47,14 @@ M.get_visual_selection = function()
   end
 
   -- Retrieve lines within the visual selection
-  local lines = vim.api.nvim_buf_get_lines(bufnr, csrow, cerow + 1, false)
+  local buffer = vim.api.nvim_get_current_buf()
+  local lines = vim.api.nvim_buf_get_lines(buffer, csrow, cerow + 1, false)
 
-  -- Check and handle special case if no lines were retrieved
+  -- There was nothing selected - I'm not sure this is possible
   if #lines == 0 then
     return ""
   end
+
   -- Handle single-line selection
   if #lines == 1 then
     lines[1] = string.sub(lines[1], cscol + 1, cecol)
@@ -57,18 +67,30 @@ M.get_visual_selection = function()
   return table.concat(lines, "\n")
 end
 
+--- Saves the top sequence for a pairwise alignment
+-- @param seq a DNA sequence as a string
 M.set_pairwise_query = function(seq) 
     M.data.query_string = seq
 end
 
+--- Saves the bottom sequence for a pairwise alignment
+-- @param seq a DNA sequence as a string
 M.set_pairwise_subject = function(seq) 
     M.data.subject_string = seq
 end
 
-M.pairwise_align = function(mode, try_reverse_complement, gap_open_penalty, gap_extend_penalty)
+--- Runs a pairwise alignment with biotools
+-- @param mode string: one of "local", "semiglobal" or "global". Default: "semiglobal"
+-- @param try_reverse_complement bool: align the forward and reverse complement and return the one with the better score. Default: true
+-- @param hide_coords bool: whether to hide the coordinates of each aligned sequences. Default: false
+-- @param gap_open_penalty int: the gap open penalty, as a positive integer. Default: 2
+-- @param gap_extend_penalty int: the gap extension penalty, as a positive integer. Default: 1
+-- @return output table: a list of (usually three) lines with the pairwise alignment text
+M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty)
     -- set defaults
     local mode = mode or "semiglobal"
     local try_reverse_complement = try_reverse_complement or true
+    local hide_coords = hide_coords or false
     local gap_open_penalty = gap_open_penalty or 2
     local gap_extend_penalty = gap_extend_penalty or 1
     try_rc_text = ""
@@ -85,34 +107,41 @@ M.pairwise_align = function(mode, try_reverse_complement, gap_open_penalty, gap_
         vim.api.nvim_err_writeln("Error executing command: " .. table.concat(output, '\n'))
         return
     end
-    M.show_popup(output)
+    return output
 end
 
+--- Gets the length of a string
+-- @param output string: the string to measure
 M.get_string_width = function(output)
     local first_line = output[1]
     return string.len(first_line)
 end
 
-M.show_popup = function(output)
+--- Displays a pairwise alignment in a popup. The text can be manipulated like any other buffer. Pressing 'q' closes
+--- the popup.
+-- @param alignment_text table: lines of a pairwise alignment. Can be produced by pairwise_align()
+M.show_popup = function(alignment_text)
   if not M.pairwise_buf or not vim.api.nvim_buf_is_valid(M.pairwise_buf) then
-    M.pairwise_buf = vim.api.nvim_create_buf(false, true)
-  else
-    -- Clear previous contents
-    vim.api.nvim_buf_set_lines(M.pairwise_buf, 0, -1, false, {})
+      -- Create a new buffer for displaying the alignment
+      M.pairwise_buf = vim.api.nvim_create_buf(false, true)
   end
-  -- Set the buffer lines to the command output
-  vim.api.nvim_buf_set_lines(M.pairwise_buf, 0, -1, false, output)
-  -- Define the size and position of the window
-  local width = M.get_string_width(output)
+  -- Put the alignment text into the buffer
+  vim.api.nvim_buf_set_lines(M.pairwise_buf, 0, -1, false, alignment_text)
+
+  -- Define the size and position of the popup window
+  local width = M.get_string_width(alignment_text)
+  --- Currently hardcoded to 3, which is sufficient for short alignments. We need to handle alignments with breaks.
   local height = 3
-  local row = 3
-  local col = 3
+  --- Distance from the left of the window to place the popup
+  local left_margin = 3
+  --- Try to put the popup slightly below the cursor, but don't put it past the end of the window.
   local cursor_r, cursor_c = unpack(vim.api.nvim_win_get_cursor(0))
   local current_window = vim.api.nvim_get_current_win()
   local winheight = vim.api.nvim_win_get_height(current_window)
+  --- I think this hard-coded 9 is specific to my scrolloff value, we need to figure this out dynamically
   local win_height = math.min(winheight - 9, cursor_r + 1)
 
-  -- Create a new floating window
+  -- Create the popup
   local win = vim.api.nvim_open_win(M.pairwise_buf, true, {
     relative = 'editor',
     width = width,
