@@ -127,9 +127,9 @@ M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_
     return output
 end
 
---- Gets the length of a string
+--- Gets the length of a pairwise alignment
 --- @param output string the string to measure
-M.get_string_width = function(output)
+M.get_alignment_width = function(output)
     local first_line = output[1]
     return string.len(first_line)
 end
