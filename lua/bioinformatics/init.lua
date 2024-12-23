@@ -153,7 +153,7 @@ M.display_alignment = function(alignment_text)
     vim.api.nvim_buf_set_lines(M.pairwise_buf, 0, -1, false, alignment_text)
 
     -- Define the size and position of the popup window
-    local width = M.get_string_width(alignment_text)
+    local width = M.get_alignment_width(alignment_text)
     --- Currently hardcoded to 3, which is sufficient for short alignments. We need to handle alignments with breaks.
     local height = 3
     --- Distance from the left of the window to place the popup
