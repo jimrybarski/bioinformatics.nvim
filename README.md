@@ -17,18 +17,18 @@ There are no configurable options and thus no setup is required.
 ## Bioinformatics functions
 
 `dna_to_rna(dna_seq)` converts a DNA sequence to RNA.  
-`rna_to_dna(rna_seq)` converts an RNA sequence to DNA.
-`reverse_complement(dna_seq)` reverse complements a DNA sequence.
-`gc_content(seq)` compute the GC content.
-`set_pairwise_query(seq)` saves a sequence to be used as the top sequence in a pairwise alignment.
-`set_pairwise_subject(seq)` saves a sequence to be used as the bottom sequence in a pairwise alignment.
-`pairwise_align(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty)` performs a pairwise alignment and returns the aligned sequences with their alignment string
-`display_alignment(alignment)` opens a popup with a pairwise alignment
+`rna_to_dna(rna_seq)` converts an RNA sequence to DNA.  
+`reverse_complement(dna_seq)` reverse complements a DNA sequence.  
+`gc_content(seq)` compute the GC content.  
+`set_pairwise_query(seq)` saves a sequence to be used as the top sequence in a pairwise alignment.  
+`set_pairwise_subject(seq)` saves a sequence to be used as the bottom sequence in a pairwise alignment.  
+`pairwise_align(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty)` performs a pairwise alignment and returns the aligned sequences with their alignment string.  
 
 ## Generic functions
 
-`get_visual_selection()` gets the text of the current visual selection.
-`search_string(needle)` initiates a search for the string `needle`
+`get_visual_selection()` gets the text of the current visual selection.  
+`search_string(needle)` initiates a search for the string `needle`.  
+`display_alignment(alignment)` opens a popup with a pairwise alignment.  
 
 ## Example usage
 
