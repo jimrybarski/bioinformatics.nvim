@@ -1,34 +1,74 @@
 # bioinformatics.nvim
+
 A collection of bioinformatics-related utilities for Neovim.
 
-## Usage
+## Installation
 
-1. click `use this template` button generate a repo on your github.
-2. clone your plugin repo.open terminal then cd plugin directory.
-3. run `python3 rename.py your-plugin-name` this will replace all `nvim-plugin-template` to your `pluing-name`. 
-   then it will prompt you input `y` or `n` to remove example codes in `init.lua` and
-   `test/plugin_spec.lua`. if you are familiar this repo just input y. if you are first look at this
-   template I suggest you look at them first. after these step the `rename.py` will also auto
-   remove.
+Requires [biotools](https://github.com/jimrybarski/biotools) (install with `cargo install biotools`) for many functions.
 
-now you have a clean plugin env . enjoy!
+With Lazy, add:
 
-## Format
+```
+{ 'jimrybarski/bioinformatics.nvim' }
+```
 
-format use `stylua` and provide `.stylua.toml`.
+There are no configurable options and thus no setup is required.
 
-## Test
-use vusted for test install by using `luarocks --lua-version=5.1 install vusted` then run `vusted test`
-for your test cases.
+## Bioinformatics functions
 
-create test case in test folder file rule is `foo_spec.lua` with `_spec` more usage please check
-[busted usage](https://lunarmodules.github.io/busted/)
+`dna_to_rna(dna_seq)` converts a DNA sequence to RNA.  
+`rna_to_dna(rna_seq)` converts an RNA sequence to DNA.
+`reverse_complement(dna_seq)` reverse complements a DNA sequence.
+`gc_content(seq)` compute the GC content.
+`set_pairwise_query(seq)` saves a sequence to be used as the top sequence in a pairwise alignment.
+`set_pairwise_subject(seq)` saves a sequence to be used as the bottom sequence in a pairwise alignment.
+`pairwise_align(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty)` performs a pairwise alignment and returns the aligned sequences with their alignment string
+`display_alignment(alignment)` opens a popup with a pairwise alignment
 
-## Ci
-Ci support auto generate doc from README and integration test and lint check by `stylua`.
+## Generic functions
 
+`get_visual_selection()` gets the text of the current visual selection.
+`search_string(needle)` initiates a search for the string `needle`
 
-## More
-Other usage you can look at my plugins
+## Example usage
 
-## License MIT
+```lua
+bio = require("bioinformatics")
+
+function set_query_visual() 
+    local seq = bio.get_visual_selection()
+    bio.set_pairwise_query(seq) 
+end
+
+function set_subject_visual() 
+    local seq = bio.get_visual_selection()
+    bio.set_pairwise_subject(seq)
+end
+
+function set_query_current_word()
+    local seq = vim.fn.expand("<cword>")
+    bio.set_pairwise_query(seq) 
+end
+
+function set_subject_current_word()
+    local seq = vim.fn.expand("<cword>")
+    bio.set_pairwise_subject(seq) 
+end
+
+function set_subject_current_word_and_align()
+    local seq = vim.fn.expand("<cword>")
+    bio.set_pairwise_subject(seq) 
+    local alignment = bio.pairwise_align()
+    bio.display_alignment(alignment)
+end
+
+vim.keymap.set('v', '<leader>bva', set_query_visual, { noremap = true, silent = true })
+vim.keymap.set('v', '<leader>bvb', set_subject_visual, { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>ba', set_query_current_word, { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>bb', set_subject_current_word_and_align, { noremap = true, silent = true })
+vim.keymap.set({"n", "v"}, '<leader>bp', bio.pairwise_align, { noremap = true, silent = true })
+```
+
+## License
+
+[MIT](LICENSE)
