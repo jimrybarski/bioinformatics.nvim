@@ -24,6 +24,23 @@ M.reverse_complement = function(dna_seq)
     return dna_seq:reverse():gsub(".", complement)
 end
 
+--- Computes the GC content of an RNA/DNA sequence.
+--- @param seq string RNA or DNA sequence
+--- @return number A float between 0.0 and 1.0, inclusive.
+M.gc_content = function(seq)
+    local normalized_sequence = seq:upper()
+    local gc_count = 0
+    local length = #normalized_sequence
+
+    for i = 1, length do
+        local nucleotide = normalized_sequence:sub(i, i)
+        if nucleotide == 'G' or nucleotide == 'C' then
+            gc_count = gc_count + 1
+        end
+    end
+
+    return (gc_count / length)
+end
 
 --- Gets the text of the current visual selection.
 --- @return string
@@ -99,7 +116,7 @@ M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_
     end
     local command = string.format('biotools pairwise-%s %s --gap-open %s --gap-extend %s %s %s ', mode, try_rc_text, gap_open_penalty, gap_extend_penalty, M.data.query_string, M.data.subject_string)
     -- Execute the command and capture the output
-    local output = vim.fn.systemlist(command)
+    output = vim.fn.systemlist(command)
 
     -- Check for errors
     local ret_code = vim.v.shell_error
@@ -111,10 +128,17 @@ M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_
 end
 
 --- Gets the length of a string
---- @param output string: the string to measure
+--- @param output string the string to measure
 M.get_string_width = function(output)
     local first_line = output[1]
     return string.len(first_line)
+end
+
+--- Initiate a search for a string
+--- @param needle string the string to search for
+M.search_string = function(needle)
+    local search_pattern = vim.fn.escape(needle, '\\')
+    vim.fn.feedkeys('/' .. search_pattern .. '\r', 'n')
 end
 
 --- Displays a pairwise alignment in a popup. The text can be manipulated like any other buffer. Pressing 'q' closes
@@ -147,7 +171,7 @@ M.display_alignment = function(alignment_text)
         width = width,
         height = height,
         row = win_height,
-        col = col,
+        col = left_margin,
         border = 'rounded',
         style = 'minimal',
     })
