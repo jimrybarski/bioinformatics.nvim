@@ -16,12 +16,32 @@ M.rna_to_dna = function(rna_seq)
     return rna_seq:gsub("U", "T")
 end
 
+--- Returns the length of a DNA sequence. Gaps and spaces will not be taken into account.
+M.length_biotools = function(seq)
+    local command = string.format('biotools length "%s"', seq)
+    output = vim.fn.systemlist(command)
+    if M.check_for_command_error() then
+        return
+    end
+    return output[1]
+end
+
 --- Returns the reverse complement of a DNA sequence.
 --- @param dna_seq string DNA sequence
 --- @return string Reverse complemented DNA sequence
 M.reverse_complement = function(dna_seq)
     local complement = {A = 'T', T = 'A', C = 'G', G = 'C'}
     return dna_seq:reverse():gsub(".", complement)
+end
+
+M.reverse_complement_biotools = function(dna_seq)
+    local command = string.format('biotools reverse-complement "%s"', seq)
+    -- Execute the command and capture the output
+    output = vim.fn.systemlist(command)
+    if M.check_for_command_error() then
+        return
+    end
+    return output[1]
 end
 
 --- Computes the GC content of an RNA/DNA sequence.
@@ -40,6 +60,16 @@ M.gc_content = function(seq)
     end
 
     return (gc_count / length)
+end
+
+M.gc_content_biotools = function(seq)
+    local command = string.format('biotools gc-content "%s"', seq)
+    -- Execute the command and capture the output
+    output = vim.fn.systemlist(command)
+    if M.check_for_command_error() then
+        return
+    end
+    return output[1]
 end
 
 --- Gets the text of the current visual selection.
@@ -81,7 +111,7 @@ M.get_visual_selection = function()
         lines[#lines] = string.sub(lines[#lines], 1, cecol)
     end
     -- Join the lines into a single string
-    return table.concat(lines, "\n")
+    return table.concat(lines, "")
 end
 
 --- Saves the top sequence for a pairwise alignment
@@ -118,13 +148,18 @@ M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_
     -- Execute the command and capture the output
     output = vim.fn.systemlist(command)
 
-    -- Check for errors
-    local ret_code = vim.v.shell_error
-    if ret_code ~= 0 then
-        vim.api.nvim_err_writeln("Error executing command: " .. table.concat(output, '\n'))
+    if M.check_for_command_error() then
         return
     end
     return output
+end
+
+M.check_for_command_error = function()
+    local ret_code = vim.v.shell_error
+    if ret_code ~= 0 then
+        return true
+    end
+    return false
 end
 
 --- Gets the length of a pairwise alignment
@@ -141,19 +176,18 @@ M.search_string = function(needle)
     vim.fn.feedkeys('/' .. search_pattern .. '\r', 'n')
 end
 
---- Displays a pairwise alignment in a popup. The text can be manipulated like any other buffer. Pressing 'q' closes
---- the popup.
---- @param alignment_text table lines of a pairwise alignment (usually produced by pairwise_align())
-M.display_alignment = function(alignment_text)
-    if not M.pairwise_buf or not vim.api.nvim_buf_is_valid(M.pairwise_buf) then
+--- Displays a pairwise alignment in a popup. The text can be manipulated like any other buffer. Pressing 'q' or leaving the window closes the popup.
+--- @param text table 
+M.display_text = function(text)
+    if not M.display_buf or not vim.api.nvim_buf_is_valid(M.display_buf) then
         -- Create a new buffer for displaying the alignment
-        M.pairwise_buf = vim.api.nvim_create_buf(false, true)
+        M.display_buf = vim.api.nvim_create_buf(false, true)
     end
     -- Put the alignment text into the buffer
-    vim.api.nvim_buf_set_lines(M.pairwise_buf, 0, -1, false, alignment_text)
+    vim.api.nvim_buf_set_lines(M.display_buf, 0, -1, false, text)
 
     -- Define the size and position of the popup window
-    local width = M.get_alignment_width(alignment_text)
+    local width = M.get_alignment_width(text)
     --- Currently hardcoded to 3, which is sufficient for short alignments. We need to handle alignments with breaks.
     local height = 3
     --- Distance from the left of the window to place the popup
@@ -166,7 +200,7 @@ M.display_alignment = function(alignment_text)
     local win_height = math.min(winheight - 9, cursor_r + 1)
 
     -- Create the popup
-    local win = vim.api.nvim_open_win(M.pairwise_buf, true, {
+    M.display_win = vim.api.nvim_open_win(M.display_buf, true, {
         relative = 'editor',
         width = width,
         height = height,
@@ -175,8 +209,18 @@ M.display_alignment = function(alignment_text)
         border = 'rounded',
         style = 'minimal',
     })
-    -- Map 'q' to close the window
-    vim.api.nvim_buf_set_keymap(M.pairwise_buf, 'n', 'q', '<Cmd>bd!<CR>', { noremap = true, silent = true })
+
+    -- Pressing q or leaving the popup will close it
+    vim.api.nvim_buf_set_keymap(M.display_buf, 'n', 'q', '<Cmd>bd!<CR>', { noremap = true, silent = true })
+    vim.api.nvim_create_autocmd({"WinLeave"}, {
+        buffer = M.display_buf,
+        callback = function() 
+            local win = M.display_win
+            if vim.api.nvim_win_is_valid(win) then
+                vim.api.nvim_win_close(win, true)
+            end
+        end
+    })
 end
 
 return M
