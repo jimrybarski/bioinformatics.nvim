@@ -21,7 +21,7 @@ end
 M.length_biotools = function(seq)
     local command = string.format('biotools length "%s"', seq)
     output = vim.fn.systemlist(command)
-    if M.check_for_command_error() then
+    if M._check_for_command_error() then
         return
     end
     return tonumber(output[1])
@@ -41,7 +41,7 @@ M.reverse_complement_biotools = function(dna_seq)
     local command = string.format('biotools reverse-complement "%s"', dna_seq)
     -- Execute the command and capture the output
     output = vim.fn.systemlist(command)
-    if M.check_for_command_error() then
+    if M._check_for_command_error() then
         return
     end
     return output[1]
@@ -72,7 +72,7 @@ M.gc_content_biotools = function(seq)
     local command = string.format('biotools gc-content "%s"', seq)
     -- Execute the command and capture the output
     output = vim.fn.systemlist(command)
-    if M.check_for_command_error() then
+    if M._check_for_command_error() then
         return
     end
     return tonumber(output[1])
@@ -161,13 +161,13 @@ M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_
         _gap_open_penalty, _gap_extend_penalty, M.data.query_string, M.data.subject_string)
     local output = vim.fn.systemlist(command)
 
-    if M.check_for_command_error() then
+    if M._check_for_command_error() then
         return
     end
     return output
 end
 
-M.check_for_command_error = function()
+M._check_for_command_error = function()
     local ret_code = vim.v.shell_error
     if ret_code ~= 0 then
         return true
@@ -177,14 +177,14 @@ end
 
 --- Gets the length of a pairwise alignment
 --- @param output table a table containing strings we want to measure. Assumes all strings are the same length.
-M.get_alignment_width = function(output)
+M._get_alignment_width = function(output)
     local first_line = output[1]
     return string.len(first_line)
 end
 
 --- Initiate a search for a string
 --- @param needle string the string to search for
-M.search_string = function(needle)
+M.search_for_string = function(needle)
     local search_pattern = vim.fn.escape(needle, '\\')
     vim.fn.feedkeys('/' .. search_pattern .. '\r', 'n')
 end
@@ -200,7 +200,7 @@ M.display_text = function(text)
     vim.api.nvim_buf_set_lines(M.display_buf, 0, -1, false, text)
 
     -- Define the size and position of the popup window
-    local width = M.get_alignment_width(text)
+    local width = M._get_alignment_width(text)
     --- Currently hardcoded to 3, which is sufficient for short alignments. We need to handle alignments with breaks.
     local height = 3
     --- Distance from the left of the window to place the popup
