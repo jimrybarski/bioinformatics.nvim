@@ -35,7 +35,7 @@ There are no configurable options and thus no setup is required.
 
 ## Examples
 
-Generating and searching for a reverse complement:
+Generating, pasting and searching for a reverse complement:
 ![Generating, pasting and searching for a reverse complement](casts/rc.gif)  
 
 Performing pairwise alignments:
@@ -46,16 +46,20 @@ Length and GC content:
 
 ## Example config
 
-bioinformatics.nvim does not set any keymaps or provide any (useful) functionality out of the box. Here's the config I find useful in my own workflow. Note that this requires [rcarriga/nvim-notify](https://github.com/rcarriga/nvim-notify).
+bioinformatics.nvim is just a library of functions, with no keymaps set out of the box. You'll need to string these
+functions together and define your own keymaps to make use of it. Below is the config I find useful in my own workflow. 
+Note that this requires [rcarriga/nvim-notify](https://github.com/rcarriga/nvim-notify).
 
 ```lua
 bio = require("bioinformatics")
 
+-- save the current visual selection as the top sequence in a pairwise alignment, to be performed later
 function set_query_visual()
     local seq = bio.get_visual_selection()
     bio.set_pairwise_query(seq)
 end
 
+-- save the current visual selection as the bottom sequence in a pairwise alignment, then perform the alignment
 function set_subject_visual_and_align()
     local seq = bio.get_visual_selection()
     bio.set_pairwise_subject(seq)
@@ -63,16 +67,19 @@ function set_subject_visual_and_align()
     bio.display_text(alignment)
 end
 
+-- save the text under the cursor as the top sequence in a pairwise alignment, to be performed later
 function set_query_current_word()
     local seq = vim.fn.expand("<cword>")
     bio.set_pairwise_query(seq)
 end
 
+-- save the text under the cursor as the bottom sequence in a pairwise alignment, to be performed later
 function set_subject_current_word()
     local seq = vim.fn.expand("<cword>")
     bio.set_pairwise_subject(seq)
 end
 
+-- save the current visual selection as the bottom sequence in a pairwise alignment, then perform the alignment
 function set_subject_current_word_and_align()
     local seq = vim.fn.expand("<cword>")
     bio.set_pairwise_subject(seq)
@@ -80,6 +87,7 @@ function set_subject_current_word_and_align()
     bio.display_text(alignment)
 end
 
+-- show the length and GC content of the current visual selection
 function popup_stats()
     local seq = bio.get_visual_selection()
     local gc_content = bio.gc_content_biotools(seq)
@@ -88,6 +96,7 @@ function popup_stats()
     vim.notify(text)
 end
 
+-- show the length and GC content of the text under the cursor
 function popup_stats_current_word()
     local seq = vim.fn.expand("<cword>")
     local gc_content = bio.gc_content_biotools(seq)
@@ -96,28 +105,45 @@ function popup_stats_current_word()
     vim.notify(text)
 end
 
+-- search for the reverse complement of the text under the cursor
 function search_for_rc_current_word()
     local seq = vim.fn.expand("<cword>")
     local revcomp = bio.reverse_complement_biotools(seq)
     bio.search_for_string(revcomp)
 end
 
+-- search for the text under the cursor
+-- this is distinct from `*` as it will find the text even if it's a substring
+-- frankly I don't understand why this isn't something provided out of the box by neovim
+function search_for_current_word()
+    local seq = vim.fn.expand("<cword>")
+    bio.search_for_string(seq)
+end
+
+-- compute the reverse complement of the text under the cursor and store it in the clipboard register
 function put_rc_in_register()
     local seq = vim.fn.expand("<cword>")
     local revcomp = bio.reverse_complement_biotools(seq)
     vim.fn.setreg('+', revcomp, "l")
 end
 
+-- To perform pairwise alignments, put the cursor over the first sequence you want to align (or visually select it)
+-- and press `ba`. Then put the cursor over the other sequence you want to align (or visually select it) and press `bb`.
+-- The alignment will immediately pop up. You can close the popup with `q`, or you can manipulate it like regular text 
+-- for use elsewhere. Subsequent uses of `bb` will align other sequences to the first one that was selected with `ba`.
 vim.keymap.set('n', '<leader>ba', set_query_current_word, { noremap = true, silent = true })
 vim.keymap.set('v', '<leader>ba', set_query_visual, { noremap = true, silent = true })
-
 vim.keymap.set('n', '<leader>bb', set_subject_current_word_and_align, { noremap = true, silent = true })
 vim.keymap.set('v', '<leader>bb', set_subject_visual_and_align, { noremap = true, silent = true })
 
+-- Show the GC content and length of the current word or visual selection
 vim.keymap.set('n', '<leader>bs', popup_stats_current_word, { noremap = true, silent = true })
 vim.keymap.set('v', '<leader>bs', popup_stats, { noremap = true, silent = true })
 
+-- Search for the reverse complement of the word under the cursor
 vim.keymap.set('n', '<leader>brs', search_for_rc_current_word, { noremap = true, silent = true })
+
+-- Copy the reverse complement of the current word to the clipboard register
 vim.keymap.set('n', '<leader>bry', put_rc_in_register, { noremap = true, silent = true })
 ```
 
