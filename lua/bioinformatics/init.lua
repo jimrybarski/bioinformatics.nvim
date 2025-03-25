@@ -20,7 +20,7 @@ end
 --- @return number|nil
 M.length_biotools = function(seq)
     local command = string.format('biotools length "%s"', seq)
-    output = vim.fn.systemlist(command)
+    local output = vim.fn.systemlist(command)
     if M._check_for_command_error() then
         return
     end
@@ -40,7 +40,7 @@ end
 M.reverse_complement_biotools = function(dna_seq)
     local command = string.format('biotools reverse-complement "%s"', dna_seq)
     -- Execute the command and capture the output
-    output = vim.fn.systemlist(command)
+    local output = vim.fn.systemlist(command)
     if M._check_for_command_error() then
         return
     end
@@ -71,7 +71,7 @@ end
 M.gc_content_biotools = function(seq)
     local command = string.format('biotools gc-content "%s"', seq)
     -- Execute the command and capture the output
-    output = vim.fn.systemlist(command)
+    local output = vim.fn.systemlist(command)
     if M._check_for_command_error() then
         return
     end
