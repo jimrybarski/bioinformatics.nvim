@@ -17,7 +17,7 @@ M.rna_to_dna = function(rna_seq)
 end
 
 --- Returns the length of a DNA sequence. Gaps and spaces will not be taken into account.
---- @return number|nil 
+--- @return number|nil
 M.length_biotools = function(seq)
     local command = string.format('biotools length "%s"', seq)
     output = vim.fn.systemlist(command)
@@ -138,14 +138,19 @@ end
 --- @param hide_coords boolean whether to hide the coordinates of each aligned sequences. Default: false
 --- @param gap_open_penalty integer the gap open penalty, as a positive integer. Default: 2
 --- @param gap_extend_penalty integer the gap extension penalty, as a positive integer. Default: 1
+--- @param line_width integer the number of characters in an alignment before a line wrap. Default: 60
+--- @param use_0_based_coords boolean use 0-based coordinates. Default: false
 --- @return table|nil a list of (usually three) lines with the pairwise alignment text. nil is returned when there's an error running biotools.
-M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty)
+M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty, line_width,
+                            use_0_based_coords)
     -- set defaults
     local _mode = mode or "semiglobal"
     local _try_reverse_complement = try_reverse_complement or true
     local _hide_coords = hide_coords or false
     local _gap_open_penalty = gap_open_penalty or 2
     local _gap_extend_penalty = gap_extend_penalty or 1
+    local _line_width = line_width or 60
+    local _use_0_based_coords = use_0_based_coords or false
     local try_rc_text = ""
     if _try_reverse_complement then
         try_rc_text = "--try-rc"
@@ -155,10 +160,17 @@ M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_
         hide_coords_text = "--hide-coords"
     end
 
+    local use_0_based_coords_text = ""
+    if _use_0_based_coords then
+        use_0_based_coords_text = "--use-0-based-coords"
+    end
     -- run biotools
-    local command = string.format('biotools pairwise-%s %s %s --gap-open %s --gap-extend %s %s %s ', _mode, try_rc_text,
+    local command = string.format(
+        'biotools pairwise-%s %s %s --gap-open %s --gap-extend %s --line-width %s %s %s %s ', _mode,
+        try_rc_text,
         hide_coords_text,
-        _gap_open_penalty, _gap_extend_penalty, M.data.query_string, M.data.subject_string)
+        _gap_open_penalty, _gap_extend_penalty, _line_width, use_0_based_coords_text, M.data.query_string,
+        M.data.subject_string)
     local output = vim.fn.systemlist(command)
 
     if M._check_for_command_error() then
@@ -202,7 +214,7 @@ M.display_text = function(text)
     -- Define the size and position of the popup window
     local width = M._get_alignment_width(text)
     --- Currently hardcoded to 3, which is sufficient for short alignments. We need to handle alignments with breaks.
-    local height = 3
+    local height = #text
     --- Distance from the left of the window to place the popup
     local left_margin = 3
     --- Try to put the popup slightly below the cursor, but don't put it past the end of the window.
