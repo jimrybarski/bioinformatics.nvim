@@ -16,15 +16,12 @@ M.rna_to_dna = function(rna_seq)
     return rna_seq:gsub("U", "T")[1]
 end
 
---- Returns the length of a DNA sequence. Gaps and spaces will not be taken into account.
---- @return number|nil
-M.length_biotools = function(seq)
-    local command = string.format('biotools length "%s"', seq)
-    local output = vim.fn.systemlist(command)
-    if M._check_for_command_error() then
-        return
-    end
-    return tonumber(output[1])
+--- Returns the length of a DNA sequence, ignoring whitespace and dashes.
+--- @param seq string DNA sequence
+--- @return number Length of the sequence
+M.length = function(seq)
+    local normalized_sequence = seq:gsub("[%s%-]", "")
+    return #normalized_sequence
 end
 
 --- Returns the reverse complement of a DNA sequence.
@@ -32,26 +29,15 @@ end
 --- @return string Reverse complemented DNA sequence
 M.reverse_complement = function(dna_seq)
     local complement = { A = 'T', T = 'A', C = 'G', G = 'C' }
-    return dna_seq:reverse():gsub(".", complement)[1]
-end
-
---- Returns the reverse complement of a DNA sequence using biotools, which tolerates spaces and dashes.
---- @return string|nil
-M.reverse_complement_biotools = function(dna_seq)
-    local command = string.format('biotools reverse-complement "%s"', dna_seq)
-    -- Execute the command and capture the output
-    local output = vim.fn.systemlist(command)
-    if M._check_for_command_error() then
-        return
-    end
-    return output[1]
+    local revcomp, _ = dna_seq:reverse():gsub(".", complement)
+    return revcomp
 end
 
 --- Computes the GC content of an RNA/DNA sequence.
 --- @param seq string RNA or DNA sequence
 --- @return number A float between 0.0 and 1.0, inclusive.
 M.gc_content = function(seq)
-    local normalized_sequence = seq:upper()
+    local normalized_sequence, _ = seq:upper():gsub("[%s%-]", "")
     local gc_count = 0
     local length = #normalized_sequence
 
@@ -63,19 +49,6 @@ M.gc_content = function(seq)
     end
 
     return (gc_count / length)
-end
-
---- Computes the GC content of an RNA/DNA sequence.
---- @param seq string RNA or DNA sequence
---- @return number|nil gc_content A number between 0.0 and 1.0, inclusive. nil is returned if biotools encounters an error.
-M.gc_content_biotools = function(seq)
-    local command = string.format('biotools gc-content "%s"', seq)
-    -- Execute the command and capture the output
-    local output = vim.fn.systemlist(command)
-    if M._check_for_command_error() then
-        return
-    end
-    return tonumber(output[1])
 end
 
 --- Gets the text of the current visual selection.
@@ -213,7 +186,6 @@ M.display_text = function(text)
 
     -- Define the size and position of the popup window
     local width = M._get_alignment_width(text)
-    --- Currently hardcoded to 3, which is sufficient for short alignments. We need to handle alignments with breaks.
     local height = #text
     --- Distance from the left of the window to place the popup
     local left_margin = 3

@@ -18,11 +18,8 @@ There are no configurable options and thus no setup is required.
 
 `dna_to_rna(dna_seq)` converts a DNA sequence to RNA.  
 `rna_to_dna(rna_seq)` converts an RNA sequence to DNA.  
-`length_biotools(seq)` computes the length of a sequence, ignoring dashes and spaces.  
 `reverse_complement(dna_seq)` reverse complements a DNA sequence.  
-`reverse_complement_biotools(dna_seq)` reverse complements a DNA sequence using biotools (which permits spaces and dashes).  
 `gc_content(seq)` computes the GC content.  
-`gc_content_biotools(seq)` computes the GC content, ignoring spaces and dashes.  
 `set_pairwise_query(seq)` saves a sequence to be used as the top sequence in a pairwise alignment.  
 `set_pairwise_subject(seq)` saves a sequence to be used as the bottom sequence in a pairwise alignment.  
 `pairwise_align(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty)` performs a pairwise alignment with biotools and returns the aligned sequences with their alignment string.  
@@ -37,7 +34,6 @@ There are no configurable options and thus no setup is required.
 
 Generating, pasting and searching for a reverse complement:
 ![Generating, pasting and searching for a reverse complement](casts/rc.gif)  
-
 Performing pairwise alignments:
 ![Performing pairwise alignments](casts/pairwise.gif)  
 
@@ -90,8 +86,8 @@ end
 -- show the length and GC content of the current visual selection
 function popup_stats()
     local seq = bio.get_visual_selection()
-    local gc_content = bio.gc_content_biotools(seq)
-    local length = bio.length_biotools(seq)
+    local gc_content = bio.gc_content(seq)
+    local length = bio.length(seq)
     local text = string.format("GC: %.6f\nLen: %d bp", gc_content, length)
     vim.notify(text)
 end
@@ -99,8 +95,8 @@ end
 -- show the length and GC content of the text under the cursor
 function popup_stats_current_word()
     local seq = vim.fn.expand("<cword>")
-    local gc_content = bio.gc_content_biotools(seq)
-    local length = bio.length_biotools(seq)
+    local gc_content = bio.gc_content(seq)
+    local length = bio.length(seq)
     local text = string.format("GC: %.6f\nLen: %d bp", gc_content, length)
     vim.notify(text)
 end
@@ -108,7 +104,7 @@ end
 -- search for the reverse complement of the text under the cursor
 function search_for_rc_current_word()
     local seq = vim.fn.expand("<cword>")
-    local revcomp = bio.reverse_complement_biotools(seq)
+    local revcomp = bio.reverse_complement(seq)
     bio.search_for_string(revcomp)
 end
 
@@ -123,7 +119,7 @@ end
 -- compute the reverse complement of the text under the cursor and store it in the clipboard register
 function put_rc_in_register()
     local seq = vim.fn.expand("<cword>")
-    local revcomp = bio.reverse_complement_biotools(seq)
+    local revcomp = bio.reverse_complement(seq)
     vim.fn.setreg('+', revcomp, "l")
 end
 
