@@ -165,10 +165,16 @@ M._check_for_command_error = function()
 end
 
 --- Gets the length of a pairwise alignment
---- @param output table a table containing strings we want to measure. Assumes all strings are the same length.
+--- @param output table a table containing strings we want to measure. Finds the width of the widest line.
 M._get_alignment_width = function(output)
-    local first_line = output[1]
-    return string.len(first_line)
+    local max_width = 0
+    for _, line in ipairs(output) do
+        local line_width = string.len(line)
+        if line_width > max_width then
+            max_width = line_width
+        end
+    end
+    return max_width
 end
 
 --- Initiate a search for a string
