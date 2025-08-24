@@ -22,8 +22,20 @@ There are no configurable options and thus no setup is required.
 `gc_content(seq)` computes the GC content.  
 `set_pairwise_query(seq)` saves a sequence to be used as the top sequence in a pairwise alignment.  
 `set_pairwise_subject(seq)` saves a sequence to be used as the bottom sequence in a pairwise alignment.  
-`pairwise_align(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty)` performs a pairwise alignment with biotools and returns the aligned sequences with their alignment string.  
+`pairwise_align(opts)` performs a pairwise alignment with biotools and returns the aligned sequences with their alignment string.
 
+Default pairwise alignment options:
+```lua
+{
+    mode = "semiglobal",
+    try_reverse_complement = true,
+    hide_coords = false,
+    gap_open_penalty = 2,
+    gap_extend_penalty = 1,
+    line_width = 60,
+    use_0_based_coords = false
+}
+```
 ## Generic functions
 
 `get_visual_selection()` gets the text of the current visual selection.  
@@ -34,6 +46,7 @@ There are no configurable options and thus no setup is required.
 
 Generating, pasting and searching for a reverse complement:
 ![Generating, pasting and searching for a reverse complement](casts/rc.gif)  
+
 Performing pairwise alignments:
 ![Performing pairwise alignments](casts/pairwise.gif)  
 

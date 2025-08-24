@@ -6,14 +6,14 @@ M.data = {}
 --- @param dna_seq string The DNA sequence
 --- @return string RNA sequence
 M.dna_to_rna = function(dna_seq)
-    return dna_seq:gsub("T", "U")[1]
+    return (dna_seq:gsub("T", "U"))
 end
 
 --- Converts an RNA sequence to DNA.
 --- @param rna_seq string The RNA sequence
 --- @return string DNA sequence
 M.rna_to_dna = function(rna_seq)
-    return rna_seq:gsub("U", "T")[1]
+    return (rna_seq:gsub("U", "T"))
 end
 
 --- Returns the length of a DNA sequence, ignoring whitespace and dashes.
@@ -29,18 +29,21 @@ end
 --- @return string Reverse complemented DNA sequence
 M.reverse_complement = function(dna_seq)
     local complement = { A = 'T', T = 'A', C = 'G', G = 'C' }
-    local revcomp, _ = dna_seq:reverse():gsub(".", complement)
-    return revcomp
+    return (dna_seq:reverse():gsub(".", complement))
 end
 
 --- Computes the GC content of an RNA/DNA sequence.
 --- @param seq string RNA or DNA sequence
 --- @return number A float between 0.0 and 1.0, inclusive.
 M.gc_content = function(seq)
-    local normalized_sequence, _ = seq:upper():gsub("[%s%-]", "")
-    local gc_count = 0
+    local normalized_sequence = seq:upper():gsub("[%s%-]", "")
     local length = #normalized_sequence
+    
+    if length == 0 then
+        return 0
+    end
 
+    local gc_count = 0
     for i = 1, length do
         local nucleotide = normalized_sequence:sub(i, i)
         if nucleotide == 'G' or nucleotide == 'C' then
@@ -48,7 +51,7 @@ M.gc_content = function(seq)
         end
     end
 
-    return (gc_count / length)
+    return gc_count / length
 end
 
 --- Gets the text of the current visual selection.
@@ -106,43 +109,44 @@ M.set_pairwise_subject = function(seq)
 end
 
 --- Runs a pairwise alignment with biotools
---- @param mode string one of "local", "semiglobal" or "global". Default: "semiglobal"
---- @param try_reverse_complement boolean align the forward and reverse complement and return the one with the better score. Default: true
---- @param hide_coords boolean whether to hide the coordinates of each aligned sequences. Default: false
---- @param gap_open_penalty integer the gap open penalty, as a positive integer. Default: 2
---- @param gap_extend_penalty integer the gap extension penalty, as a positive integer. Default: 1
---- @param line_width integer the number of characters in an alignment before a line wrap. Default: 60
---- @param use_0_based_coords boolean use 0-based coordinates. Default: false
+--- @param opts table|nil Optional parameters table with keys:
+---   - mode: string one of "local", "semiglobal" or "global". Default: "semiglobal"
+---   - try_reverse_complement: boolean align the forward and reverse complement and return the one with the better score. Default: true
+---   - hide_coords: boolean whether to hide the coordinates of each aligned sequences. Default: false
+---   - gap_open_penalty: integer the gap open penalty, as a positive integer. Default: 2
+---   - gap_extend_penalty: integer the gap extension penalty, as a positive integer. Default: 1
+---   - line_width: integer the number of characters in an alignment before a line wrap. Default: 60
+---   - use_0_based_coords: boolean use 0-based coordinates. Default: false
 --- @return table|nil a list of (usually three) lines with the pairwise alignment text. nil is returned when there's an error running biotools.
-M.pairwise_align = function(mode, try_reverse_complement, hide_coords, gap_open_penalty, gap_extend_penalty, line_width,
-                            use_0_based_coords)
+M.pairwise_align = function(opts)
+    opts = opts or {}
     -- set defaults
-    local _mode = mode or "semiglobal"
-    local _try_reverse_complement = try_reverse_complement or true
-    local _hide_coords = hide_coords or false
-    local _gap_open_penalty = gap_open_penalty or 2
-    local _gap_extend_penalty = gap_extend_penalty or 1
-    local _line_width = line_width or 60
-    local _use_0_based_coords = use_0_based_coords or false
+    local mode = opts.mode or "semiglobal"
+    local try_reverse_complement = opts.try_reverse_complement ~= false  -- default true, but allow explicit false
+    local hide_coords = opts.hide_coords or false
+    local gap_open_penalty = opts.gap_open_penalty or 2
+    local gap_extend_penalty = opts.gap_extend_penalty or 1
+    local line_width = opts.line_width or 60
+    local use_0_based_coords = opts.use_0_based_coords or false
     local try_rc_text = ""
-    if _try_reverse_complement then
+    if try_reverse_complement then
         try_rc_text = "--try-rc"
     end
     local hide_coords_text = ""
-    if _hide_coords then
+    if hide_coords then
         hide_coords_text = "--hide-coords"
     end
 
     local use_0_based_coords_text = ""
-    if _use_0_based_coords then
+    if use_0_based_coords then
         use_0_based_coords_text = "--use-0-based-coords"
     end
     -- run biotools
     local command = string.format(
-        'biotools pairwise-%s %s %s --gap-open %s --gap-extend %s --line-width %s %s %s %s ', _mode,
+        'biotools pairwise-%s %s %s --gap-open %s --gap-extend %s --line-width %s %s %s %s ', mode,
         try_rc_text,
         hide_coords_text,
-        _gap_open_penalty, _gap_extend_penalty, _line_width, use_0_based_coords_text, M.data.query_string,
+        gap_open_penalty, gap_extend_penalty, line_width, use_0_based_coords_text, M.data.query_string,
         M.data.subject_string)
     local output = vim.fn.systemlist(command)
 
@@ -193,8 +197,9 @@ M.display_text = function(text)
     local cursor_r, _ = unpack(vim.api.nvim_win_get_cursor(0))
     local current_window = vim.api.nvim_get_current_win()
     local winheight = vim.api.nvim_win_get_height(current_window)
-    --- I think this hard-coded 9 is specific to my scrolloff value, we need to figure this out dynamically
-    local win_height = math.min(winheight - 9, cursor_r + 1)
+    -- Calculate available space below cursor, accounting for scrolloff and status line
+    local scrolloff = vim.o.scrolloff
+    local win_height = math.min(winheight - scrolloff - 1, cursor_r + 1)
 
     -- Create the popup
     M.display_win = vim.api.nvim_open_win(M.display_buf, true, {
